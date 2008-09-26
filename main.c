@@ -22,6 +22,16 @@ usage(const char *name)
 	fprintf(stderr, "Usage:\n  %s hostname service|port\n", name);
 }
 
+static char *
+unknown_error(int status)
+{
+	/* This is basically a programming error, but it should at least
+	be able to tell us *what* programming error. */
+	static char buf[32];
+	snprintf(buf, sizeof(buf)-1, "unknown: %d", (int)status);
+	return buf;
+}
+
 int 
 main(int argc, char **argv)
 {
@@ -40,18 +50,11 @@ main(int argc, char **argv)
 	while((status=attemptConnection(hostname, svc)) != RV_SUCCESS) {
 		t=time(NULL);
 		char *err="unknown";
-		if(status == ERR_ERRNO) {
-			err=strerror(errno);
-		} else if(status == ERR_TIMEOUT) {
-			err="timeout";
-		} else if(status == ERR_DNS) {
-			err="getaddrinfo error";
-		} else {
-			/* This is basically a programming error, but it should at least
-			   be able to tell us *what* programming error. */
-			char buf[32];
-			snprintf(buf, sizeof(buf)-1, "unknown: %d", (int)status);
-			err=buf;
+		switch(status) {
+			case ERR_ERRNO:   err=strerror(errno);       break;
+			case ERR_TIMEOUT: err="timeout";             break;
+			case ERR_DNS:     err="getaddrinfo error";   break;
+			default:          err=unknown_error(status);
 		}
 		assert(err != NULL);
 		fprintf(stderr, "Failed to connect (%s) at %s", err, ctime(&t));
