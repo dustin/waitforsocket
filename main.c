@@ -16,6 +16,8 @@
 
 #include "waitforsocket.h"
 
+static requested_socket *reqs;
+
 static void
 usage(const char *name)
 {
@@ -32,20 +34,32 @@ unknown_error(int status)
 	return buf;
 }
 
+static int
+parse_commands(int argc, char **argv)
+{
+	int rv = 0;
+	reqs = calloc(argc, sizeof(requested_socket));
+
+	if(argc < 3) {
+		return -1;
+	}
+
+	reqs[0]=mk_req(argv[1], argv[2]);
+
+	return rv;
+}
+
 int 
 main(int argc, char **argv)
 {
 	time_t  t=0, status;
-	requested_socket req;
 
-	if (argc < 3) {
+	if (parse_commands(argc, argv) < 0) {
 		usage(argv[0]);
 		exit(0);
 	}
 
-	req = mk_req(argv[1], argv[2]);
-
-	while((status=attemptConnection(&req)) != RV_SUCCESS) {
+	while((status=attemptConnection(&reqs[0])) != RV_SUCCESS) {
 		t=time(NULL);
 		char *err="unknown";
 		switch(status) {
