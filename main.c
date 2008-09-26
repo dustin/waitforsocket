@@ -50,7 +50,7 @@ main(int argc, char **argv)
 			/* This is basically a programming error, but it should at least
 			   be able to tell us *what* programming error. */
 			char buf[32];
-			snprintf(buf, sizeof(buf)-1, "unknown: %d", status);
+			snprintf(buf, sizeof(buf)-1, "unknown: %d", (int)status);
 			err=buf;
 		}
 		assert(err != NULL);
