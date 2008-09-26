@@ -22,14 +22,14 @@
 
 #include "waitforsocket.h"
 
-static int waitForConnect(int s)
+static enum returnvalues waitForConnect(int s)
 {
 	int selected=0;
 	fd_set rset;
 	fd_set wset;
 	fd_set eset;
 	struct timeval tv;
-	int rv=ERR_ERRNO;
+	enum returnvalues rv=ERR_ERRNO;
 
 	FD_ZERO(&rset);
 	FD_ZERO(&wset);
@@ -63,11 +63,11 @@ static int waitForConnect(int s)
 	return(rv);
 }
 
-int
+enum returnvalues
 attemptConnection(char *host, char *svc)
 {
 	struct addrinfo hints, *res, *res0;
-	int     rv=ERR_ERRNO;
+	enum returnvalues rv=ERR_ERRNO;
 	register int s = -1;
 	struct linger l;
 	int fflags =0;
