@@ -67,7 +67,7 @@ int
 attemptConnection(char *host, char *svc)
 {
 	struct addrinfo hints, *res, *res0;
-	int     rv=ERR_ERRNO, i, flag;
+	int     rv=ERR_ERRNO;
 	register int s = -1;
 	struct linger l;
 	int fflags =0;
