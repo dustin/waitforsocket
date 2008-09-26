@@ -35,19 +35,17 @@ unknown_error(int status)
 int 
 main(int argc, char **argv)
 {
-	char   *hostname=0x00;
-	char   *svc=0x00;
 	time_t  t=0, status;
+	requested_socket req;
 
 	if (argc < 3) {
 		usage(argv[0]);
 		exit(0);
 	}
 
-	hostname = argv[1];
-	svc=argv[2];
+	req = mk_req(argv[1], argv[2]);
 
-	while((status=attemptConnection(hostname, svc)) != RV_SUCCESS) {
+	while((status=attemptConnection(req)) != RV_SUCCESS) {
 		t=time(NULL);
 		char *err="unknown";
 		switch(status) {

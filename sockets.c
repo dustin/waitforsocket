@@ -22,6 +22,17 @@
 
 #include "waitforsocket.h"
 
+requested_socket mk_req(char *host, char *svc)
+{
+	requested_socket rv;
+
+	rv.host=host;
+	rv.svc=svc;
+	rv.success=0;
+
+	return rv;
+}
+
 static enum returnvalues waitForConnect(int s)
 {
 	int selected=0;
@@ -64,7 +75,7 @@ static enum returnvalues waitForConnect(int s)
 }
 
 enum returnvalues
-attemptConnection(char *host, char *svc)
+attemptConnection(requested_socket req)
 {
 	struct addrinfo hints, *res, *res0;
 	enum returnvalues rv=ERR_ERRNO;
@@ -74,17 +85,17 @@ attemptConnection(char *host, char *svc)
 	char *cause=NULL;
 	int err=0;
 
-	if (host == NULL || svc == NULL) {
+	if (req.host == NULL || req.svc == NULL) {
 		return (0);
 	}
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = PF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
-	err=getaddrinfo(host, svc, &hints, &res0);
+	err=getaddrinfo(req.host, req.svc, &hints, &res0);
 	if(err != 0) {
 		fprintf(stderr, "Error looking up %s:%s:  %s\n",
-			host, svc, gai_strerror(err));
+			req.host, req.svc, gai_strerror(err));
 		return(ERR_DNS);
 	}
 
