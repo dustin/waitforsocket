@@ -88,7 +88,6 @@ attemptConnection(char *host, char *svc)
 		return(ERR_DNS);
 	}
 
-	/* of course, replace that 1 with the max number of con attempts */
 	cause="no addresses";
 	for (res = res0; res; res = res->ai_next) {
 
