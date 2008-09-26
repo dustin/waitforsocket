@@ -45,7 +45,7 @@ main(int argc, char **argv)
 
 	req = mk_req(argv[1], argv[2]);
 
-	while((status=attemptConnection(req)) != RV_SUCCESS) {
+	while((status=attemptConnection(&req)) != RV_SUCCESS) {
 		t=time(NULL);
 		char *err="unknown";
 		switch(status) {

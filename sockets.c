@@ -29,6 +29,7 @@ requested_socket mk_req(char *host, char *svc)
 	rv.host=host;
 	rv.svc=svc;
 	rv.success=0;
+	rv.socket=-1;
 
 	return rv;
 }
@@ -75,34 +76,33 @@ static enum returnvalues waitForConnect(int s)
 }
 
 enum returnvalues
-attemptConnection(requested_socket req)
+attemptConnection(requested_socket *req)
 {
 	struct addrinfo hints, *res, *res0;
 	enum returnvalues rv=ERR_ERRNO;
-	register int s = -1;
 	struct linger l;
 	int fflags =0;
 	char *cause=NULL;
 	int err=0;
 
-	if (req.host == NULL || req.svc == NULL) {
+	if (req->host == NULL || req->svc == NULL) {
 		return (0);
 	}
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = PF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
-	err=getaddrinfo(req.host, req.svc, &hints, &res0);
+	err=getaddrinfo(req->host, req->svc, &hints, &res0);
 	if(err != 0) {
 		fprintf(stderr, "Error looking up %s:%s:  %s\n",
-			req.host, req.svc, gai_strerror(err));
+			req->host, req->svc, gai_strerror(err));
 		return(ERR_DNS);
 	}
 
 	cause="no addresses";
 	for (res = res0; res; res = res->ai_next) {
 
-		if ((s = socket(res->ai_family, res->ai_socktype,
+		if ((req->socket = socket(res->ai_family, res->ai_socktype,
 			res->ai_protocol)) < 0) {
 
 			cause="socket";
@@ -111,15 +111,15 @@ attemptConnection(requested_socket req)
 
 		l.l_onoff = 1;
 		l.l_linger = 60;
-		setsockopt(s, SOL_SOCKET, SO_LINGER, (char *) &l, sizeof(l));
+		setsockopt(req->socket, SOL_SOCKET, SO_LINGER, (char *) &l, sizeof(l));
 
 		/* Configure non-blocking IO */
-		fflags = fcntl(s, F_GETFL);
-		if(fcntl(s, F_SETFL, fflags | O_NONBLOCK) < 0) {
+		fflags = fcntl(req->socket, F_GETFL);
+		if(fcntl(req->socket, F_SETFL, fflags | O_NONBLOCK) < 0) {
 			perror("fcntl");
 		}
 
-		if (connect(s, res->ai_addr, res->ai_addrlen) < 0) {
+		if (connect(req->socket, res->ai_addr, res->ai_addrlen) < 0) {
 			if(errno==EINPROGRESS) {
 				rv = RV_SUCCESS;
 				break;
@@ -135,13 +135,13 @@ attemptConnection(requested_socket req)
 
 	/* If we got this far, wait for data */
 	if(rv == RV_SUCCESS) {
-		rv=waitForConnect(s);
+		rv=waitForConnect(req->socket);
 	} else {
 		perror(cause);
 	}
 
-	if(s>=0) {
-		close(s);
+	if(req->socket>=0) {
+		close(req->socket);
 	}
 
 	return rv;
