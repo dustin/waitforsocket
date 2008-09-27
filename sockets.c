@@ -22,6 +22,8 @@
 
 #include "waitforsocket.h"
 
+#define MAX(a, b) (a > b ? a : b)
+
 requested_socket mk_req(char *host, char *svc)
 {
 	requested_socket rv;
@@ -34,9 +36,9 @@ requested_socket mk_req(char *host, char *svc)
 	return rv;
 }
 
-static enum returnvalues waitForConnect(int s)
+static enum returnvalues waitForConnect(requested_socket *req)
 {
-	int selected=0;
+	int selected=0, i=0, maxs=-1;
 	fd_set rset;
 	fd_set wset;
 	fd_set eset;
@@ -46,26 +48,36 @@ static enum returnvalues waitForConnect(int s)
 	FD_ZERO(&rset);
 	FD_ZERO(&wset);
 	FD_ZERO(&eset);
-	FD_SET(s, &rset);
-	FD_SET(s, &wset);
-	FD_SET(s, &eset);
+
+	for(i=0; req[i].host; i++) {
+		if(req[i].socket >= 0) {
+			FD_SET(req[i].socket, &rset);
+			FD_SET(req[i].socket, &wset);
+			FD_SET(req[i].socket, &eset);
+		}
+		maxs=MAX(req[i].socket, maxs);
+	}
 
 	/* Wait up to five seconds */
 	tv.tv_sec=5;
 	tv.tv_usec=0;
 
-	selected=select(s+1, &rset, &wset, &eset, &tv);
+	selected=select(maxs+1, &rset, &wset, &eset, &tv);
 	if(selected > 0) {
-		if(FD_ISSET(s, &rset)) {
-			char buf[1];
-			/* Make sure we can read a byte */
-			if(read(s, &buf, 1) == 1) {
-				rv=RV_SUCCESS;
+		for(i=0; req[i].host && rv != RV_SUCCESS; i++) {
+			if(req[i].socket >= 0) {
+				if(FD_ISSET(req[i].socket, &rset)) {
+					char buf[1];
+					/* Make sure we can read a byte */
+					if(read(req[i].socket, &buf, 1) == 1) {
+						rv=RV_SUCCESS;
+					}
+				} else if(FD_ISSET(req[i].socket, &wset)) {
+					rv=RV_SUCCESS;
+				} else {
+					rv=ERR_ERRNO;
+				}
 			}
-		} else if(FD_ISSET(s, &wset)) {
-			rv=RV_SUCCESS;
-		} else {
-			rv=ERR_ERRNO;
 		}
 	} else {
 		rv=ERR_TIMEOUT;
@@ -76,7 +88,7 @@ static enum returnvalues waitForConnect(int s)
 }
 
 enum returnvalues
-attemptConnection(requested_socket *req)
+setupOneConnection(requested_socket *req)
 {
 	struct addrinfo hints, *res, *res0;
 	enum returnvalues rv=ERR_ERRNO;
@@ -133,15 +145,31 @@ attemptConnection(requested_socket *req)
 	}
 	freeaddrinfo(res0);
 
-	/* If we got this far, wait for data */
-	if(rv == RV_SUCCESS) {
-		rv=waitForConnect(req->socket);
-	} else {
+	if(rv != RV_SUCCESS && req->socket >= 0) {
 		perror(cause);
+		close(req->socket);
+		req->socket = -1;
 	}
 
-	if(req->socket>=0) {
-		close(req->socket);
+	return rv;
+}
+
+enum returnvalues
+attemptConnection(requested_socket *reqs)
+{
+	int i=0, any_success=0;
+	enum returnvalues rv = ERR_ERRNO;
+
+	for(i=0; reqs[i].host; i++) {
+		any_success |= (setupOneConnection(&reqs[i]) == RV_SUCCESS);
+	}
+
+	rv=waitForConnect(reqs);
+
+	for(i=0; reqs[i].host; i++) {
+		if(reqs[i].socket>=0) {
+			close(reqs[i].socket);
+		}
 	}
 
 	return rv;
