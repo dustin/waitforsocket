@@ -40,21 +40,21 @@ parse_commands(int argc, char **argv)
 	int rv = 0, current_arg = 1;
 	reqs = calloc(argc, sizeof(requested_socket));
 
-	for(current_arg=0; current_arg<argc; current_arg++) {
+	for(current_arg=1; current_arg<argc; current_arg++) {
 		if(strchr(argv[current_arg], ':') == NULL) {
 			if(current_arg == argc-1) {
-				fprintf(stderr, "Ran out arguments after host %s\n",
+				fprintf(stderr, "Need a port number for %s\n",
 					argv[current_arg]);
 				return -1;
 			}
 			reqs[rv++]=mk_req(argv[current_arg], argv[current_arg+1]);
 			current_arg++;
 		} else {
-			fprintf(stderr, "Can't parse these yet.\n");
-			return -1;
+			char *host=strdup(argv[current_arg]);
+			*(strchr(host, ':')) = 0x00;
+			reqs[rv++]=mk_req(host, host + strlen(host)+1);
 		}
 	}
-
 
 	return rv;
 }
