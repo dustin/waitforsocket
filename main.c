@@ -69,7 +69,7 @@ main(int argc, char **argv)
 		exit(0);
 	}
 
-	while((status=attemptConnection(&reqs[0])) != RV_SUCCESS) {
+	while((status=attemptConnection(reqs)) != RV_SUCCESS) {
 		t=time(NULL);
 		char *err="unknown";
 		switch(status) {
