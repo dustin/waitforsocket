@@ -64,7 +64,7 @@ main(int argc, char **argv)
 {
 	time_t  t=0, status;
 
-	if (parse_commands(argc, argv) < 0) {
+	if (parse_commands(argc, argv) < 1) {
 		usage(argv[0]);
 		exit(0);
 	}
