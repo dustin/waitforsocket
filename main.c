@@ -37,14 +37,24 @@ unknown_error(int status)
 static int
 parse_commands(int argc, char **argv)
 {
-	int rv = 0;
+	int rv = 0, current_arg = 1;
 	reqs = calloc(argc, sizeof(requested_socket));
 
-	if(argc < 3) {
-		return -1;
+	for(current_arg=0; current_arg<argc; current_arg++) {
+		if(strchr(argv[current_arg], ':') == NULL) {
+			if(current_arg == argc-1) {
+				fprintf(stderr, "Ran out arguments after host %s\n",
+					argv[current_arg]);
+				return -1;
+			}
+			reqs[rv++]=mk_req(argv[current_arg], argv[current_arg+1]);
+			current_arg++;
+		} else {
+			fprintf(stderr, "Can't parse these yet.\n");
+			return -1;
+		}
 	}
 
-	reqs[0]=mk_req(argv[1], argv[2]);
 
 	return rv;
 }
