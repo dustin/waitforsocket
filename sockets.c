@@ -38,51 +38,78 @@ requested_socket mk_req(char *host, char *svc)
 
 static enum returnvalues waitForConnect(requested_socket *req)
 {
-	int selected=0, i=0, maxs=-1;
+	int selected=0, i=0, maxs=-1, seen=0;
+	time_t now=0, then=0;
 	fd_set rset;
 	fd_set wset;
 	fd_set eset;
 	struct timeval tv;
-	enum returnvalues rv=ERR_ERRNO;
-
-	FD_ZERO(&rset);
-	FD_ZERO(&wset);
-	FD_ZERO(&eset);
+	enum returnvalues rv=ERR_TIMEOUT;;
 
 	for(i=0; req[i].host; i++) {
-		if(req[i].socket >= 0) {
-			FD_SET(req[i].socket, &rset);
-			FD_SET(req[i].socket, &wset);
-			FD_SET(req[i].socket, &eset);
-		}
-		maxs=MAX(req[i].socket, maxs);
+		req[i].success=0;
 	}
 
-	/* Wait up to five seconds */
-	tv.tv_sec=5;
-	tv.tv_usec=0;
+	then=time(NULL) + 5;
+	now=time(NULL);
 
-	selected=select(maxs+1, &rset, &wset, &eset, &tv);
-	if(selected > 0) {
-		for(i=0; req[i].host && rv != RV_SUCCESS; i++) {
-			if(req[i].socket >= 0) {
-				if(FD_ISSET(req[i].socket, &rset)) {
-					char buf[1];
-					/* Make sure we can read a byte */
-					if(read(req[i].socket, &buf, 1) == 1) {
-						rv=RV_SUCCESS;
+	while(now < then && seen == 0) {
+
+		maxs=-1;
+
+		FD_ZERO(&rset);
+		FD_ZERO(&wset);
+		FD_ZERO(&eset);
+
+		for(i=0; req[i].host; i++) {
+			if(req[i].socket >= 0 && req[i].success == 0) {
+				FD_SET(req[i].socket, &rset);
+				FD_SET(req[i].socket, &wset);
+				FD_SET(req[i].socket, &eset);
+				maxs=MAX(req[i].socket, maxs);
+			}
+		}
+
+		if(maxs < 0) {
+			break;
+		}
+
+		/* Wait up to five seconds */
+		tv.tv_sec=(then-now);
+		tv.tv_usec=0;
+
+		selected=select(maxs+1, &rset, &wset, &eset, &tv);
+		if(selected > 0) {
+			for(i=0; req[i].host && rv != RV_SUCCESS; i++) {
+				if(req[i].socket >= 0) {
+					if(FD_ISSET(req[i].socket, &rset)) {
+						char buf[1];
+						/* Make sure we can read a byte */
+						if(read(req[i].socket, &buf, 1) == 1) {
+							req[i].success=1;
+							seen++;
+						} else {
+							rv=ERR_ERRNO;
+							req[i].success=-1;
+						}
+					} else if(FD_ISSET(req[i].socket, &wset)) {
+						req[i].success=1;
+						seen++;
+					} else {
+						/* I don't quite understand why it's not OK to consider
+						 * this a failure, but in practice, not ignoring this
+						 * gives me a lot of false negatives. */
+						rv=ERR_ERRNO;
 					}
-				} else if(FD_ISSET(req[i].socket, &wset)) {
-					rv=RV_SUCCESS;
-				} else {
-					rv=ERR_ERRNO;
 				}
 			}
 		}
-	} else {
-		rv=ERR_TIMEOUT;
+
+		now=time(NULL);
 	}
-	
+
+	rv = seen > 0 ? RV_SUCCESS : rv;
+
 	/* True if there was at least one thing that hinted as being available */
 	return(rv);
 }
