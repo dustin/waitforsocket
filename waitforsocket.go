@@ -32,15 +32,16 @@ func try(addr string) error {
 }
 
 type res struct {
-	addr string
-	t    time.Time
+	addr       string
+	started, t time.Time
 }
 
 func wait(addr string, ch chan res) {
 	ticker := time.Tick(*timeout)
+	started := time.Now()
 	for {
 		if err := try(addr); err == nil {
-			ch <- res{addr, time.Now()}
+			ch <- res{addr, started, time.Now()}
 			return
 		} else {
 			log.Printf("%v", err)
@@ -72,6 +73,6 @@ func main() {
 	for responses < *required {
 		r := <-ch
 		responses++
-		log.Printf("Connected to %v", r.addr)
+		log.Printf("Connected to %v after %v", r.addr, r.t.Sub(r.started))
 	}
 }
