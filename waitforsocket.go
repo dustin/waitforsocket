@@ -23,14 +23,6 @@ func init() {
 	}
 }
 
-func try(addr string) error {
-	c, err := net.DialTimeout("tcp", addr, *timeout)
-	if err == nil {
-		c.Close()
-	}
-	return err
-}
-
 type res struct {
 	addr       string
 	started, t time.Time
@@ -40,13 +32,14 @@ func wait(addr string, ch chan res) {
 	ticker := time.Tick(*timeout)
 	started := time.Now()
 	for {
-		if err := try(addr); err == nil {
+		c, err := net.DialTimeout("tcp", addr, *timeout)
+		if err == nil {
+			c.Close()
 			ch <- res{addr, started, time.Now()}
 			return
-		} else {
-			log.Printf("%v", err)
-			<-ticker
 		}
+		log.Printf("%v", err)
+		<-ticker
 	}
 
 }
