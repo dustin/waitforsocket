@@ -10,8 +10,9 @@ import (
 )
 
 var (
-	timeout  = flag.Duration("timeout", 5*time.Second, "connection/retry timeout")
-	required = flag.Int("required", 0, "How many connections required (0 == all)")
+	timeout    = flag.Duration("timeout", 5*time.Second, "connection/retry timeout")
+	absTimeout = flag.Duration("absTimeout", 0, "absolute timeout (0 == never)")
+	required   = flag.Int("required", 0, "How many connections required (0 == all)")
 )
 
 func init() {
@@ -62,10 +63,20 @@ func main() {
 		go wait(hp, ch)
 	}
 
+	var absTo <-chan time.Time
+	if *absTimeout > 0 {
+		absTo = time.After(*absTimeout)
+	}
+
 	responses := 0
 	for responses < *required {
-		r := <-ch
-		responses++
-		log.Printf("Connected to %v after %v", r.addr, r.t.Sub(r.started))
+		select {
+		case r := <-ch:
+			responses++
+			log.Printf("Connected to %v after %v", r.addr, r.t.Sub(r.started))
+		case <-absTo:
+			log.Printf("Timed out")
+			os.Exit(1)
+		}
 	}
 }
