@@ -53,6 +53,10 @@ func main() {
 		os.Exit(64)
 	}
 
+	if *absTimeout > 0 {
+		time.AfterFunc(*absTimeout, func() { log.Fatalf("Timed out") })
+	}
+
 	if *required == 0 {
 		*required = flag.NArg()
 	}
@@ -63,20 +67,11 @@ func main() {
 		go wait(hp, ch)
 	}
 
-	var absTo <-chan time.Time
-	if *absTimeout > 0 {
-		absTo = time.After(*absTimeout)
-	}
-
 	responses := 0
 	for responses < *required {
-		select {
-		case r := <-ch:
-			responses++
-			log.Printf("Connected to %v after %v",
-				r.addr, r.connected.Sub(r.started))
-		case <-absTo:
-			log.Fatalf("Timed out")
-		}
+		r := <-ch
+		responses++
+		log.Printf("Connected to %v after %v",
+			r.addr, r.connected.Sub(r.started))
 	}
 }
