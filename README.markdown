@@ -1,7 +1,15 @@
 This is a simple go program that waits for a remote socket to become available.
 It's useful to avoid guessing when a service comes back up, etc...
 
-## Example:
+## Install
+
+Assuming you have a recent [go][go] compiler installed and working
+correctly, you can install `waitforsocket` with the following command:
+
+    go get github.com/dustin/waitforsocket
+
+
+## Example
 
     waitforsocket somehost:22 ; ssh somehost
 
@@ -13,3 +21,5 @@ If you want to be fancy, you can look for a variety of hosts, and be
 satisfied when any one of them works (e.g. am I on the internet?):
 
     waitforsocket -required=1 www.{yahoo,google,microsoft}.com:80
+
+[go]: http://golang.org/
