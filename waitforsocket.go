@@ -25,8 +25,8 @@ func init() {
 }
 
 type res struct {
-	addr       string
-	started, t time.Time
+	addr               string
+	started, connected time.Time
 }
 
 func wait(addr string, ch chan res) {
@@ -73,7 +73,8 @@ func main() {
 		select {
 		case r := <-ch:
 			responses++
-			log.Printf("Connected to %v after %v", r.addr, r.t.Sub(r.started))
+			log.Printf("Connected to %v after %v",
+				r.addr, r.connected.Sub(r.started))
 		case <-absTo:
 			log.Printf("Timed out")
 			os.Exit(1)
