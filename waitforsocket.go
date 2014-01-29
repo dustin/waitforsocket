@@ -76,8 +76,7 @@ func main() {
 			log.Printf("Connected to %v after %v",
 				r.addr, r.connected.Sub(r.started))
 		case <-absTo:
-			log.Printf("Timed out")
-			os.Exit(1)
+			log.Fatalf("Timed out")
 		}
 	}
 }
