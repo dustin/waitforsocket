@@ -5,8 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"os"
+	"strings"
 	"time"
+
+	"github.com/dustin/httputil"
 )
 
 var (
@@ -29,7 +33,42 @@ type res struct {
 	started, connected time.Time
 }
 
+func tryURL(url string) error {
+	client := &http.Client{
+		Timeout: *timeout,
+	}
+
+	res, err := client.Get(url)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	if res.StatusCode >= 200 && res.StatusCode < 300 {
+		return nil
+	}
+	return httputil.HTTPError(res)
+}
+
+func waitURL(addr string, ch chan res) {
+	ticker := time.Tick(*timeout)
+	started := time.Now()
+	for {
+		err := tryURL(addr)
+		if err == nil {
+			ch <- res{addr, started, time.Now()}
+			return
+		}
+		log.Printf("%v", err)
+		<-ticker
+	}
+}
+
 func wait(addr string, ch chan res) {
+	if strings.Contains(addr, "/") {
+		waitURL(addr, ch)
+		return
+	}
+
 	ticker := time.Tick(*timeout)
 	started := time.Now()
 	for {
