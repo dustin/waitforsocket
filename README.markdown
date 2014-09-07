@@ -22,4 +22,16 @@ satisfied when any one of them works (e.g. am I on the internet?):
 
     waitforsocket -required=1 www.{yahoo,google,microsoft}.com:80
 
+## Experimental
+
+HTTP support is currently experimental (i.e. it's useful, but too easy
+to add a billion new options I didn't want to add, so it may not be
+perfect enough).  You can supply a URL instead of a host:port in that
+case.  e.g.:
+
+    waitforsocket http://www.{yahoo,google,microsoft}.com/
+
+And it will wait until these all return HTTP responses indicating
+success.
+
 [go]: http://golang.org/
