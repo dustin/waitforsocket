@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -33,15 +34,18 @@ type res struct {
 	started, connected time.Time
 }
 
-func tryURL(url string) error {
-	client := &http.Client{
-		Timeout: *timeout,
-	}
-
-	res, err := client.Get(url)
+func tryURL(ctx context.Context, url string) error {
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
 	}
+	req = req.WithContext(ctx)
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+
 	defer res.Body.Close()
 	if res.StatusCode >= 200 && res.StatusCode < 300 {
 		return nil
@@ -49,11 +53,13 @@ func tryURL(url string) error {
 	return httputil.HTTPError(res)
 }
 
-func waitURL(addr string, ch chan res) {
+func waitURL(ctx context.Context, addr string, ch chan res) {
 	ticker := time.Tick(*timeout)
 	started := time.Now()
 	for {
-		err := tryURL(addr)
+		ctxt, cancel := context.WithTimeout(ctx, *timeout)
+		err := tryURL(ctxt, addr)
+		cancel()
 		if err == nil {
 			ch <- res{addr, started, time.Now()}
 			return
@@ -63,16 +69,19 @@ func waitURL(addr string, ch chan res) {
 	}
 }
 
-func wait(addr string, ch chan res) {
+func wait(ctx context.Context, addr string, ch chan res) {
 	if strings.Contains(addr, "/") {
-		waitURL(addr, ch)
+		waitURL(ctx, addr, ch)
 		return
 	}
 
 	ticker := time.Tick(*timeout)
 	started := time.Now()
+	d := net.Dialer{}
 	for {
-		c, err := net.DialTimeout("tcp", addr, *timeout)
+		ctxt, cancel := context.WithTimeout(ctx, *timeout)
+		c, err := d.DialContext(ctxt, "tcp", addr)
+		cancel()
 		if err == nil {
 			c.Close()
 			ch <- res{addr, started, time.Now()}
@@ -92,6 +101,8 @@ func main() {
 		os.Exit(64)
 	}
 
+	ctx := context.Background()
+
 	if *absTimeout > 0 {
 		time.AfterFunc(*absTimeout, func() { log.Fatalf("Timed out") })
 	}
@@ -103,14 +114,13 @@ func main() {
 	ch := make(chan res)
 
 	for _, hp := range flag.Args() {
-		go wait(hp, ch)
+		go wait(ctx, hp, ch)
 	}
 
 	responses := 0
 	for responses < *required {
 		r := <-ch
 		responses++
-		log.Printf("Connected to %v after %v",
-			r.addr, r.connected.Sub(r.started))
+		log.Printf("Connected to %v after %v", r.addr, r.connected.Sub(r.started))
 	}
 }
