@@ -30,8 +30,8 @@ func init() {
 }
 
 type res struct {
-	addr               string
-	started, connected time.Time
+	addr                       string
+	started, latest, connected time.Time
 }
 
 func tryURL(ctx context.Context, url string) error {
@@ -58,10 +58,11 @@ func waitURL(ctx context.Context, addr string, ch chan res) {
 	started := time.Now()
 	for {
 		ctxt, cancel := context.WithTimeout(ctx, *timeout)
+		latest := time.Now()
 		err := tryURL(ctxt, addr)
 		cancel()
 		if err == nil {
-			ch <- res{addr, started, time.Now()}
+			ch <- res{addr, started, latest, time.Now()}
 			return
 		}
 		log.Printf("%v", err)
@@ -80,11 +81,12 @@ func wait(ctx context.Context, addr string, ch chan res) {
 	d := net.Dialer{}
 	for {
 		ctxt, cancel := context.WithTimeout(ctx, *timeout)
+		latest := time.Now()
 		c, err := d.DialContext(ctxt, "tcp", addr)
 		cancel()
 		if err == nil {
 			c.Close()
-			ch <- res{addr, started, time.Now()}
+			ch <- res{addr, started, latest, time.Now()}
 			return
 		}
 		log.Printf("%v", err)
@@ -121,6 +123,6 @@ func main() {
 	for responses < *required {
 		r := <-ch
 		responses++
-		log.Printf("Connected to %v after %v", r.addr, r.connected.Sub(r.started))
+		log.Printf("Connected to %v in %v after %v", r.addr, r.connected.Sub(r.latest), r.connected.Sub(r.started))
 	}
 }
