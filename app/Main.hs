@@ -4,7 +4,7 @@ import Waitforsocket
 
 import System.IO (hClose)
 import Network (connectTo)
-import Network.HTTP (simpleHTTP, getRequest)
+import Network.HTTP (simpleHTTP, getRequest, getResponseCode)
 import Control.Monad (when)
 import Control.Exception.Safe (catchIO)
 import Control.Concurrent.Async
@@ -37,11 +37,18 @@ attemptIO t f = do
   loginfo $ "Connecting to " ++ show t
   catchIO f (\e -> loginfo ("Error connecting to " ++ show t ++ ": " ++ show e) >> return False)
 
+-- simpleHTTP :: HStream ty => Request ty -> IO (Result (Response ty))
+-- getResponseCode :: Result (Response ty) -> IO ResponseCode
+
 tryConnect :: Target -> IO Bool
 tryConnect targ@(TCP h p) = do
   attemptIO targ $ connectTo h p >>= hClose >> pure True
 tryConnect targ@(HTTP u) = do
-  attemptIO targ $ simpleHTTP (getRequest u) >> pure True
+  attemptIO targ $ do
+    req <- simpleHTTP (getRequest u)
+    rc <- getResponseCode req
+    when (rc /= (2,0,0)) $ loginfo $ "Response code from " ++ show targ ++ " was " ++ show rc
+    return $ rc == (2,0,0)
 
 connect :: Target -> IO Bool
 connect targ = do
