@@ -21,17 +21,17 @@ instance Arbitrary ArbitraryHostname where
               n <- choose (1,12)
               vectorOf n $ elements (['a'..'z'] ++ ['0'..'9'])
 
-propTCPTargetParsing :: ArbitraryHostname -> (Positive Int) -> Bool
+propTCPTargetParsing :: ArbitraryHostname -> Positive Int -> Bool
 propTCPTargetParsing (ArbitraryHostname h) (Positive p) =
   case parseTarget (h ++ ":" ++ show p) of
-    Just (TCP h (Service p)) -> True
+    Right (TCP h (Service p)) -> True
     _ -> False
 
 propHTTPTargetParsing :: ArbitraryHostname -> Bool
 propHTTPTargetParsing (ArbitraryHostname h) =
   let u = "http://" ++ h ++ "/stuff" in
     case parseTarget u of
-      Just (HTTP u) -> True
+      Right (HTTP u) -> True
       _ -> False
 
 tests :: [TestTree]

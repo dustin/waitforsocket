@@ -18,6 +18,7 @@ library
   exposed-modules:     Waitforsocket
   build-depends:       base >= 4.7 && < 5
                      , async, time, network, optparse-applicative, HTTP
+                     , attoparsec, text
   default-language:    Haskell2010
   ghc-options:         -Wall
 
@@ -42,6 +43,7 @@ test-suite waitforsocket-test
                      , tasty, tasty-quickcheck
                      , QuickCheck
                      , network
+                     , attoparsec, text
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 

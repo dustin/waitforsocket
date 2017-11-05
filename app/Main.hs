@@ -14,7 +14,6 @@ import System.Log.Logger (rootLoggerName, updateGlobalLogger,
                           Priority(INFO), setLevel, infoM)
 
 import Options.Applicative
-import Options.Applicative (maybeReader)
 import Data.Semigroup ((<>))
 
 data Options = Options { optAbsTimeout :: Integer
@@ -31,10 +30,7 @@ options = Options
   <$> option auto (long "absTimeout" <> showDefault <> value 0 <> help "absolute timeout")
   <*> option auto (long "required" <> showDefault <> value 0 <> help "how many connections required (0 = all)")
   <*> option auto (long "timeout" <> showDefault <> value 5000 <> help "connect/retry timeout (ms)")
-  <*> some (argument parseTarget' (metavar "targets..."))
-
-parseTarget' :: ReadM Target
-parseTarget' = maybeReader parseTarget
+  <*> some (argument (eitherReader parseTarget) (metavar "targets..."))
 
 attemptIO :: Target -> IO Bool -> IO Bool
 attemptIO t f = do
@@ -42,14 +38,12 @@ attemptIO t f = do
   catchIO f (\e -> loginfo ("Error connecting to " ++ show t ++ ": " ++ show e) >> return False)
 
 tryConnect :: Target -> IO Bool
-tryConnect targ@(TCP h p) = do
-  attemptIO targ $ connectTo h p >>= hClose >> pure True
-tryConnect targ@(HTTP u) = do
-  attemptIO targ $ do
-    req <- simpleHTTP (getRequest u)
-    rc <- getResponseCode req
-    when (rc /= (2,0,0)) $ loginfo $ "Response code from " ++ show targ ++ " was " ++ show rc
-    return $ rc == (2,0,0)
+tryConnect targ@(TCP h p) = attemptIO targ $ connectTo h p >>= hClose >> pure True
+tryConnect targ@(HTTP u) = attemptIO targ $ do
+  req <- simpleHTTP (getRequest u)
+  rc <- getResponseCode req
+  when (rc /= (2,0,0)) $ loginfo $ "Response code from " ++ show targ ++ " was " ++ show rc
+  return $ rc == (2,0,0)
 
 connect :: Target -> IO Bool
 connect targ = do

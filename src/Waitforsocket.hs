@@ -1,9 +1,16 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Waitforsocket
     ( waitN
     , while
     , timedFun
     , Target(..)
     , parseTarget
+    , Hostname(..)
+    , URL(..)
+    , hostnameParser
+    , urlParser
+    , hostPortParser
     ) where
 
 import Control.Applicative ((<|>))
@@ -11,7 +18,9 @@ import Control.Concurrent.Async (waitAny, Async)
 import Control.Concurrent (threadDelay)
 import Data.Maybe (fromMaybe)
 import Data.Time.Clock (getCurrentTime, diffUTCTime, NominalDiffTime)
-import Data.List (isSubsequenceOf, elemIndex)
+import Data.List (isSubsequenceOf)
+import qualified Data.Attoparsec.Text as A
+import qualified Data.Text as T
 import Network (PortID(..))
 
 data Target = TCP String PortID
@@ -22,18 +31,38 @@ instance Show Target where
   show (HTTP s) = "web@" ++ s
   show _ = undefined
 
-parseTarget :: String -> Maybe Target
+newtype Hostname = Hostname T.Text deriving (Show)
+
+hostnameParser :: A.Parser Hostname
+hostnameParser = pure . Hostname =<< A.takeWhile (`elem` ('.':['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9']))
+
+hostPortParser :: A.Parser (T.Text, T.Text)
+hostPortParser = do
+  (Hostname host) <- hostnameParser
+  _ <- A.string ":"
+  port <- A.takeWhile (A.inClass "A-z0-9")
+  return (host, port)
+
+newtype URL = URL T.Text deriving (Show)
+
+urlParser :: A.Parser URL
+urlParser = do
+  prot <- A.string "http://" <|> A.string "https://"
+  (Hostname host) <- hostnameParser
+  rest <- A.takeText
+  return $ URL $ prot `T.append` host `T.append` rest
+
+parseTarget :: String -> Either String Target
 parseTarget s =
   http <|> tcp
 
   where
-    tcp = let c = elemIndex ':' s
-              h = (flip take) s <$> c
-              p = (flip drop) s <$> (succ <$> c) in
-            TCP <$> h <*> (Service <$> p)
+    tcp = case A.parseOnly hostPortParser (T.pack s) of
+            Right (h,p) -> Right (TCP (T.unpack h) (Service (T.unpack p)))
+            _ -> Left "can't parse service"
     http
-      | isSubsequenceOf "://" s = Just $ HTTP s
-      | otherwise = Nothing
+      | isSubsequenceOf "://" s = Right $ HTTP s
+      | otherwise = Left "can't parse URL"
 
 while :: IO (Maybe Bool) -> IO (Maybe Bool)
 while f = do
