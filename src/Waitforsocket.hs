@@ -13,8 +13,6 @@ import Data.Maybe (fromMaybe)
 import Data.Time.Clock (getCurrentTime, diffUTCTime, NominalDiffTime)
 import Data.List (isSubsequenceOf)
 import Network (PortID(..))
-import Options.Applicative (eitherReader)
-import Options.Applicative.Types (ReadM)
 
 data Target = TCP String PortID
             | HTTP String
@@ -24,16 +22,17 @@ instance Show Target where
   show (HTTP s) = "web@" ++ s
   show _ = undefined
 
-parseTarget :: ReadM Target
-parseTarget = do
-  eitherReader http <|> eitherReader tcp
+parseTarget :: String -> Maybe Target
+parseTarget s =
+  http <|> tcp
 
-  where tcp s = let h = takeWhile (/= ':') s
-                    s' = drop (length h + 1) s in
-                  Right $ TCP h (Service s')
-        http s
-          | isSubsequenceOf "://" s = Right $ HTTP s
-          | otherwise = Left "not a URL"
+  where
+    tcp = let h = takeWhile (/= ':') s
+              s' = drop (length h + 1) s in
+            Just $ TCP h (Service s')
+    http
+      | isSubsequenceOf "://" s = Just $ HTTP s
+      | otherwise = Nothing
 
 while :: IO (Maybe Bool) -> IO (Maybe Bool)
 while f = do

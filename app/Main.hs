@@ -14,6 +14,7 @@ import System.Log.Logger (rootLoggerName, updateGlobalLogger,
                           Priority(INFO), setLevel, infoM)
 
 import Options.Applicative
+import Options.Applicative (maybeReader)
 import Data.Semigroup ((<>))
 
 data Options = Options { optAbsTimeout :: Integer
@@ -30,15 +31,15 @@ options = Options
   <$> option auto (long "absTimeout" <> showDefault <> value 0 <> help "absolute timeout")
   <*> option auto (long "required" <> showDefault <> value 0 <> help "how many connections required (0 = all)")
   <*> option auto (long "timeout" <> showDefault <> value 5000 <> help "connect/retry timeout (ms)")
-  <*> some (argument parseTarget (metavar "targets..."))
+  <*> some (argument parseTarget' (metavar "targets..."))
+
+parseTarget' :: ReadM Target
+parseTarget' = maybeReader parseTarget
 
 attemptIO :: Target -> IO Bool -> IO Bool
 attemptIO t f = do
   loginfo $ "Connecting to " ++ show t
   catchIO f (\e -> loginfo ("Error connecting to " ++ show t ++ ": " ++ show e) >> return False)
-
--- simpleHTTP :: HStream ty => Request ty -> IO (Result (Response ty))
--- getResponseCode :: Result (Response ty) -> IO ResponseCode
 
 tryConnect :: Target -> IO Bool
 tryConnect targ@(TCP h p) = do
