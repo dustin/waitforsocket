@@ -4,6 +4,7 @@ import Waitforsocket
 
 import System.IO (hClose)
 import Network (connectTo)
+import Network.HTTP (simpleHTTP, getRequest)
 import Control.Monad (when)
 import Control.Exception.Safe (catchIO)
 import Control.Concurrent.Async
@@ -31,12 +32,16 @@ options = Options
   <*> option auto (long "timeout" <> showDefault <> value 5000 <> help "connect/retry timeout (ms)")
   <*> some (argument parseTarget (metavar "targets..."))
 
+attemptIO :: Target -> IO Bool -> IO Bool
+attemptIO t f = do
+  loginfo $ "Connecting to " ++ show t
+  catchIO f (\e -> loginfo ("Error connecting to " ++ show t ++ ": " ++ show e) >> return False)
+
 tryConnect :: Target -> IO Bool
 tryConnect targ@(TCP h p) = do
-    loginfo $ "Connecting to " ++ show targ
-    catchIO tryConn (\e -> loginfo ("Error conneting to " ++ show targ ++ ": " ++ show e) >> return False)
-  where tryConn :: IO Bool
-        tryConn = connectTo h p >>= hClose >> pure True
+  attemptIO targ $ connectTo h p >>= hClose >> pure True
+tryConnect targ@(HTTP u) = do
+  attemptIO targ $ simpleHTTP (getRequest u) >> pure True
 
 connect :: Target -> IO Bool
 connect targ = do

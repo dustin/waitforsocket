@@ -6,25 +6,34 @@ module Waitforsocket
     , parseTarget
     ) where
 
+import Control.Applicative ((<|>))
 import Control.Concurrent.Async (waitAny, Async)
 import Control.Concurrent (threadDelay)
 import Data.Maybe (fromMaybe)
 import Data.Time.Clock (getCurrentTime, diffUTCTime, NominalDiffTime)
+import Data.List (isSubsequenceOf)
 import Network (PortID(..))
-import Options.Applicative.Types (ReadM, readerAsk)
+import Options.Applicative (eitherReader)
+import Options.Applicative.Types (ReadM)
 
 data Target = TCP String PortID
+            | HTTP String
 
 instance Show Target where
-  show (TCP s (Service p)) = s ++ ":" ++ p
+  show (TCP s (Service p)) = "tcp@" ++ s ++ ":" ++ p
+  show (HTTP s) = "web@" ++ s
   show _ = undefined
 
 parseTarget :: ReadM Target
 parseTarget = do
-  s <- readerAsk
-  let h = takeWhile (/= ':') s
-  let s' = drop (length h + 1) s
-  return $ TCP h (Service s')
+  eitherReader http <|> eitherReader tcp
+
+  where tcp s = let h = takeWhile (/= ':') s
+                    s' = drop (length h + 1) s in
+                  Right $ TCP h (Service s')
+        http s
+          | isSubsequenceOf "://" s = Right $ HTTP s
+          | otherwise = Left "not a URL"
 
 while :: IO (Maybe Bool) -> IO (Maybe Bool)
 while f = do
