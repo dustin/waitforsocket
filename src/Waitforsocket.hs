@@ -11,7 +11,7 @@ import Control.Concurrent.Async (waitAny, Async)
 import Control.Concurrent (threadDelay)
 import Data.Maybe (fromMaybe)
 import Data.Time.Clock (getCurrentTime, diffUTCTime, NominalDiffTime)
-import Data.List (isSubsequenceOf)
+import Data.List (isSubsequenceOf, elemIndex)
 import Network (PortID(..))
 
 data Target = TCP String PortID
@@ -27,9 +27,10 @@ parseTarget s =
   http <|> tcp
 
   where
-    tcp = let h = takeWhile (/= ':') s
-              s' = drop (length h + 1) s in
-            Just $ TCP h (Service s')
+    tcp = let c = elemIndex ':' s
+              h = (flip take) s <$> c
+              p = (flip drop) s <$> (succ <$> c) in
+            TCP <$> h <*> (Service <$> p)
     http
       | isSubsequenceOf "://" s = Just $ HTTP s
       | otherwise = Nothing
