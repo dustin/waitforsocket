@@ -50,7 +50,7 @@ urlParser = do
   prot <- A.string "http://" <|> A.string "https://"
   (Hostname host) <- hostnameParser
   rest <- A.takeText
-  return $ URL $ prot `T.append` host `T.append` rest
+  return $ URL $ T.concat [prot, host, rest]
 
 parseTarget :: String -> Either String Target
 parseTarget s =
