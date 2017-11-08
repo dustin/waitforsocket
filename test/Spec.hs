@@ -28,11 +28,11 @@ instance Arbitrary ArbitraryHostname where
 
   shrink (ArbitraryHostname h)
     | length h == 1 = []
-    | '.' `elem` h = map ArbitraryHostname (map (intercalate ".") $ shortn $ split h)
-    | otherwise = map ArbitraryHostname (filter (\xs -> length xs > 0 && '-' `notElem` [head xs, last xs])
+    | '.' `elem` h = map (ArbitraryHostname . intercalate ".") $ shortn $ split h
+    | otherwise = map ArbitraryHostname (filter (\xs -> not (null xs) && '-' `notElem` [head xs, last xs])
                                          $ shortn h)
     where split :: String -> [String]
-          split h = foldr (\x (w:ws) -> if x == '.' then []:w:ws else (x:w):ws) [[]] h
+          split = foldr (\x (w:ws) -> if x == '.' then []:w:ws else (x:w):ws) [[]]
           shortn :: [a] -> [[a]]
           shortn a = go (length a - 1) a
             where go _ [] = []
