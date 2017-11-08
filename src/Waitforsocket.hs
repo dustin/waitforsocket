@@ -53,8 +53,8 @@ urlParser = do
   return $ URL $ T.concat [prot, host, rest]
 
 parseTarget :: String -> Either String Target
-parseTarget s =
-  A.parseOnly (http <|> tcp) (fromString s)
+parseTarget =
+  A.parseOnly (http <|> tcp) . fromString
   where
     http = urlParser >>= \(URL u) -> return $ HTTP (T.unpack u)
     tcp = hostPortParser >>= \(h,p) -> return $ TCP (T.unpack h) (Service (T.unpack p))
