@@ -34,8 +34,11 @@ instance Arbitrary ArbitraryHostname where
     where split :: String -> [String]
           split h = foldr (\x (w:ws) -> if x == '.' then []:w:ws else (x:w):ws) [[]] h
           shortn :: [a] -> [[a]]
-          shortn l = filter (\l' -> length l' == length l - 1) $
-                     map (\l' -> take (length l - 1) l') (tails l)
+          shortn a = go (length a - 1) a
+            where go _ [] = []
+                  go n l@(_:ls)
+                    | length l < n = []
+                    | otherwise = take n l : go n ls
 
 propTCPTargetParsing :: ArbitraryHostname -> Positive Int -> Bool
 propTCPTargetParsing (ArbitraryHostname h) (Positive p) =
