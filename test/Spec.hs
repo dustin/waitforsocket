@@ -4,7 +4,7 @@ import Test.Tasty
 import Test.Tasty.QuickCheck as QC
 
 import Network (PortID(..))
-import Data.List (intercalate)
+import Data.List (intercalate, tails)
 
 import Waitforsocket
 
@@ -23,6 +23,15 @@ instance Arbitrary ArbitraryHostname where
               n <- choose (0,12)
               more <- vectorOf n $ elements ('-':valid)
               return (first:more)
+
+  shrink (ArbitraryHostname h)
+    | h == "" = []
+    | '.' `elem` h = map ArbitraryHostname (map (intercalate ".") $ shortn $ split h)
+    | otherwise = map ArbitraryHostname (shortn h)
+    where split :: String -> [String]
+          split h = foldr (\x (w:ws) -> if x == '.' then [] : w : ws else (x:w):ws) [[]] h
+          shortn :: [a] -> [[a]]
+          shortn l = map (\l' -> take (length l - 1) l') (tails l)
 
 propTCPTargetParsing :: ArbitraryHostname -> Positive Int -> Bool
 propTCPTargetParsing (ArbitraryHostname h) (Positive p) =
