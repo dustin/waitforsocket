@@ -32,7 +32,7 @@ instance Arbitrary ArbitraryHostname where
     | otherwise = map ArbitraryHostname (filter (\xs -> length xs > 0 && '-' `notElem` [head xs, last xs])
                                          $ shortn h)
     where split :: String -> [String]
-          split h = foldr (\x (w:ws) -> if x == '.' then [] : w : ws else (x:w):ws) [[]] h
+          split h = foldr (\x (w:ws) -> if x == '.' then []:w:ws else (x:w):ws) [[]] h
           shortn :: [a] -> [[a]]
           shortn l = filter (\l' -> length l' == length l - 1) $
                      map (\l' -> take (length l - 1) l') (tails l)
