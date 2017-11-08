@@ -18,7 +18,7 @@ import Control.Concurrent.Async (waitAny, Async)
 import Control.Concurrent (threadDelay)
 import Data.Maybe (fromMaybe)
 import Data.Time.Clock (getCurrentTime, diffUTCTime, NominalDiffTime)
-import Data.List (isSubsequenceOf)
+import Data.String (fromString)
 import qualified Data.Attoparsec.Text as A
 import qualified Data.Text as T
 import Network (PortID(..))
@@ -54,15 +54,10 @@ urlParser = do
 
 parseTarget :: String -> Either String Target
 parseTarget s =
-  http <|> tcp
-
+  A.parseOnly (http <|> tcp) (fromString s)
   where
-    tcp = case A.parseOnly hostPortParser (T.pack s) of
-            Right (h,p) -> Right (TCP (T.unpack h) (Service (T.unpack p)))
-            _ -> Left "can't parse service"
-    http
-      | isSubsequenceOf "://" s = Right $ HTTP s
-      | otherwise = Left "can't parse URL"
+    http = urlParser >>= \(URL u) -> return $ HTTP (T.unpack u)
+    tcp = hostPortParser >>= \(h,p) -> return $ TCP (T.unpack h) (Service (T.unpack p))
 
 while :: IO (Maybe Bool) -> IO (Maybe Bool)
 while f = do
