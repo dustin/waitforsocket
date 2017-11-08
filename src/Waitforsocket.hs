@@ -34,7 +34,7 @@ instance Show Target where
 newtype Hostname = Hostname T.Text deriving (Show)
 
 hostnameParser :: A.Parser Hostname
-hostnameParser = pure . Hostname =<< A.takeWhile (`elem` ('.':['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9']))
+hostnameParser = pure . Hostname =<< A.takeWhile (`elem` ('-':'.':['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9']))
 
 hostPortParser :: A.Parser (T.Text, T.Text)
 hostPortParser = do

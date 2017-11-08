@@ -18,8 +18,11 @@ instance Arbitrary ArbitraryHostname where
 
       where seg :: Gen String
             seg = do
-              n <- choose (1,12)
-              vectorOf n $ elements (['a'..'z'] ++ ['0'..'9'])
+              let valid = ['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9']
+              first <- elements valid
+              n <- choose (0,12)
+              more <- vectorOf n $ elements ('-':valid)
+              return (first:more)
 
 propTCPTargetParsing :: ArbitraryHostname -> Positive Int -> Bool
 propTCPTargetParsing (ArbitraryHostname h) (Positive p) =
