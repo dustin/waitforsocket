@@ -20,18 +20,22 @@ instance Arbitrary ArbitraryHostname where
             seg = do
               let valid = ['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9']
               first <- elements valid
-              n <- choose (0,12)
+              n <- choose (0,11)
               more <- vectorOf n $ elements ('-':valid)
-              return (first:more)
+              n' <- choose (0 + if n > 0 then 1 else 0, 1)
+              evenmore <- vectorOf n' $ elements valid
+              return (first:more ++ evenmore)
 
   shrink (ArbitraryHostname h)
-    | h == "" = []
+    | length h == 1 = []
     | '.' `elem` h = map ArbitraryHostname (map (intercalate ".") $ shortn $ split h)
-    | otherwise = map ArbitraryHostname (shortn h)
+    | otherwise = map ArbitraryHostname (filter (\xs -> length xs > 0 && '-' `notElem` [head xs, last xs])
+                                         $ shortn h)
     where split :: String -> [String]
           split h = foldr (\x (w:ws) -> if x == '.' then [] : w : ws else (x:w):ws) [[]] h
           shortn :: [a] -> [[a]]
-          shortn l = map (\l' -> take (length l - 1) l') (tails l)
+          shortn l = filter (\l' -> length l' == length l - 1) $
+                     map (\l' -> take (length l - 1) l') (tails l)
 
 propTCPTargetParsing :: ArbitraryHostname -> Positive Int -> Bool
 propTCPTargetParsing (ArbitraryHostname h) (Positive p) =

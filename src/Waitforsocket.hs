@@ -16,6 +16,7 @@ module Waitforsocket
 import Control.Applicative ((<|>))
 import Control.Concurrent.Async (waitAny, Async)
 import Control.Concurrent (threadDelay)
+import Control.Monad (guard)
 import Data.Maybe (fromMaybe)
 import Data.Time.Clock (getCurrentTime, diffUTCTime, NominalDiffTime)
 import Data.String (fromString)
@@ -34,7 +35,14 @@ instance Show Target where
 newtype Hostname = Hostname T.Text deriving (Show)
 
 hostnameParser :: A.Parser Hostname
-hostnameParser = pure . Hostname =<< A.takeWhile (`elem` ('-':'.':['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9']))
+hostnameParser = do
+  parts <- hpart `A.sepBy1` A.char '.'
+  return $ Hostname (T.intercalate "." parts)
+  where hpart :: A.Parser T.Text
+        hpart = do
+          t <- A.takeWhile1 (A.inClass "A-z0-9-")
+          guard $ '-' `notElem` [T.head t, T.last t]
+          return t
 
 hostPortParser :: A.Parser (T.Text, T.Text)
 hostPortParser = do
