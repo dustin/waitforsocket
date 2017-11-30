@@ -5,8 +5,9 @@ import Waitforsocket
 import System.IO (hClose)
 import Network (connectTo)
 import Network.HTTP (simpleHTTP, getRequest, getResponseCode)
-import Control.Monad (when)
+import Control.Monad (when, forever)
 import Control.Exception.Safe (catchIO)
+import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async
 import Control.Concurrent.Timeout
 
@@ -53,7 +54,6 @@ connect targ = do
 
 waitforsocket :: Options -> IO ()
 waitforsocket (Options _ req to things) = do
-  updateGlobalLogger rootLoggerName (setLevel INFO)
   let lth = fromIntegral $ length things
   let todo = if req == 0 || req > lth then lth else req
   let asyncs = mapM (async . waitfor) things
@@ -64,7 +64,18 @@ waitforsocket (Options _ req to things) = do
         waitfor :: Target -> IO (Maybe Bool)
         waitfor u = while $ timeout (millis to) (connect u)
 
+waitAbsolutely :: Options -> IO ()
+waitAbsolutely (Options 0 _ _ _) = forever (threadDelay 10000000)
+waitAbsolutely (Options to _ _ _) = threadDelay (fromIntegral $ 1000 * to)
+
 main :: IO ()
-main = waitforsocket =<< execParser opts
+main = do
+  updateGlobalLogger rootLoggerName (setLevel INFO)
+  o <- execParser opts
+  r <- race (waitAbsolutely o) (waitforsocket o)
+  case r of
+    Left _ -> loginfo "reached absolute timeout waiting for completion"
+    Right _ -> pure ()
+
   where opts = info (options <**> helper)
           ( fullDesc <> progDesc "Wait for network things.")
