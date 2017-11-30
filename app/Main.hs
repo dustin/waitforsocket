@@ -11,13 +11,15 @@ import Network.HTTP.Conduit (simpleHttp, HttpException(..), HttpExceptionContent
 import Control.Monad (when, forever)
 import Control.Exception.Safe (catches, Handler(..), SomeException)
 import Control.Concurrent (threadDelay)
-import Control.Concurrent.Async
-import Control.Concurrent.Timeout
+import Control.Concurrent.Async (async, race)
+import Control.Concurrent.Timeout (timeout)
 
 import System.Log.Logger (rootLoggerName, updateGlobalLogger,
                           Priority(INFO), setLevel, infoM)
 
-import Options.Applicative
+import Options.Applicative (option, auto, long, showDefault, value, help, some, helper, fullDesc,
+                            progDesc, argument, eitherReader, metavar, execParser, info,
+                            (<**>), Parser)
 import Data.Semigroup ((<>))
 
 data Options = Options { optAbsTimeout :: Integer
