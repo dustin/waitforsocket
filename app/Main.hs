@@ -13,6 +13,7 @@ import Control.Exception.Safe (catches, Handler(..), SomeException)
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (async, race)
 import Control.Concurrent.Timeout (timeout)
+import System.Exit (die)
 
 import System.Log.Logger (rootLoggerName, updateGlobalLogger,
                           Priority(INFO), setLevel, infoM)
@@ -83,7 +84,7 @@ main = do
   updateGlobalLogger rootLoggerName (setLevel INFO)
   o <- execParser opts
   r <- race (waitAbsolutely o) (waitforsockets o)
-  when (isLeft r) $ loginfo "reached absolute timeout waiting for completion"
+  when (isLeft r) $ die "reached absolute timeout waiting for completion"
 
   where opts = info (options <**> helper)
           ( fullDesc <> progDesc "Wait for network things.")
