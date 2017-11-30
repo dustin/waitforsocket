@@ -60,8 +60,8 @@ connect targ = do
   when b $ loginfo $ "Connected to " ++ show targ ++ " in " ++ show t
   return b
 
-waitforsocket :: Options -> IO ()
-waitforsocket (Options _ req to things) = do
+waitforsockets :: Options -> IO ()
+waitforsockets (Options _ req to things) = do
   let lth = fromIntegral $ length things
   let todo = if req == 0 || req > lth then lth else req
   let asyncs = mapM (async . waitfor) things
@@ -80,7 +80,7 @@ main :: IO ()
 main = do
   updateGlobalLogger rootLoggerName (setLevel INFO)
   o <- execParser opts
-  r <- race (waitAbsolutely o) (waitforsocket o)
+  r <- race (waitAbsolutely o) (waitforsockets o)
   when (isLeft r) $ loginfo "reached absolute timeout waiting for completion"
 
   where opts = info (options <**> helper)
