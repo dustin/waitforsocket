@@ -29,7 +29,7 @@ executable waitforsocket-exe
   build-depends:       base, optparse-applicative, mtl, async, hslogger
                      , safe-exceptions
                      , unbounded-delays
-                     , network, HTTP
+                     , network, http-conduit
                      , waitforsocket
   default-language:    Haskell2010
   ghc-options:         -Wall

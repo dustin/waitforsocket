@@ -1,12 +1,14 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Main where
 
 import Waitforsocket
 
 import System.IO (hClose)
 import Network (connectTo)
-import Network.HTTP (simpleHTTP, getRequest, getResponseCode)
+import Network.HTTP.Conduit (simpleHttp, HttpException(..), HttpExceptionContent(..), responseStatus)
 import Control.Monad (when, forever)
-import Control.Exception.Safe (catchIO)
+import Control.Exception.Safe (catches, Handler(..), SomeException)
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async
 import Control.Concurrent.Timeout
@@ -36,15 +38,20 @@ options = Options
 attemptIO :: Target -> IO Bool -> IO Bool
 attemptIO t f = do
   loginfo $ "Connecting to " ++ show t
-  catchIO f (\e -> loginfo ("Error connecting to " ++ show t ++ ": " ++ show e) >> return False)
+  catches f [
+    Handler (\(e :: HttpException) -> False <$ printHTTPEx e),
+    Handler (\(e :: SomeException) -> False <$ loginfo ("Error connecting to " ++ show t ++ ": " ++ show e))
+            ]
+
+  where
+    printHTTPEx (HttpExceptionRequest _ (StatusCodeException res _)) =
+      loginfo $ show t ++ " " ++ (show.responseStatus) res
+    printHTTPEx (HttpExceptionRequest _ he) = loginfo $ show t ++ " " ++ show he
+    printHTTPEx e = loginfo $ "http exception: " ++ show e
 
 tryConnect :: Target -> IO Bool
 tryConnect targ@(TCP h p) = attemptIO targ $ connectTo h p >>= hClose >> pure True
-tryConnect targ@(HTTP u) = attemptIO targ $ do
-  req <- simpleHTTP (getRequest u)
-  rc <- getResponseCode req
-  when (rc /= (2,0,0)) $ loginfo $ "Response code from " ++ show targ ++ " was " ++ show rc
-  return $ rc == (2,0,0)
+tryConnect targ@(HTTP u) = attemptIO targ $ simpleHttp u >> pure True
 
 connect :: Target -> IO Bool
 connect targ = do
