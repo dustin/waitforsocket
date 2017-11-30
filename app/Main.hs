@@ -4,6 +4,7 @@ module Main where
 
 import Waitforsocket
 
+import Data.Either (isLeft)
 import System.IO (hClose)
 import Network (connectTo)
 import Network.HTTP.Conduit (simpleHttp, HttpException(..), HttpExceptionContent(..), responseStatus)
@@ -80,9 +81,7 @@ main = do
   updateGlobalLogger rootLoggerName (setLevel INFO)
   o <- execParser opts
   r <- race (waitAbsolutely o) (waitforsocket o)
-  case r of
-    Left _ -> loginfo "reached absolute timeout waiting for completion"
-    Right _ -> pure ()
+  when (isLeft r) $ loginfo "reached absolute timeout waiting for completion"
 
   where opts = info (options <**> helper)
           ( fullDesc <> progDesc "Wait for network things.")
