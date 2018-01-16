@@ -26,6 +26,7 @@ import Data.Semigroup ((<>))
 data Options = Options { optAbsTimeout :: Integer
                        , optRequired :: Integer
                        , optTimeout :: Integer
+                       , failDelay :: Int
                        , targets :: [Target]
                        }
 
@@ -37,6 +38,7 @@ options = Options
   <$> option auto (long "absTimeout" <> showDefault <> value 0 <> help "absolute timeout")
   <*> option auto (long "required" <> showDefault <> value 0 <> help "how many connections required (0 = all)")
   <*> option auto (long "timeout" <> showDefault <> value 5000 <> help "connect/retry timeout (ms)")
+  <*> option auto (long "faildelay" <> showDefault <> value 1 <> help "seconds to delay before retrying")
   <*> some (argument (eitherReader parseTarget) (metavar "targets..."))
 
 attemptIO :: Target -> IO Bool -> IO Bool
@@ -64,7 +66,7 @@ connect targ = do
   return b
 
 waitforsockets :: Options -> IO ()
-waitforsockets (Options _ req to things) = do
+waitforsockets (Options _ req to fd things) = do
   let lth = fromIntegral $ length things
   let todo = if req == 0 || req > lth then lth else req
   let asyncs = mapM (async . waitfor) things
@@ -73,11 +75,11 @@ waitforsockets (Options _ req to things) = do
 
   where millis = (* 1000)
         waitfor :: Target -> IO (Maybe Bool)
-        waitfor u = while $ timeout (millis to) (connect u)
+        waitfor u = while (fd * 1000000) $ timeout (millis to) (connect u)
 
 waitAbsolutely :: Options -> IO ()
-waitAbsolutely (Options 0 _ _ _) = forever (threadDelay 10000000)
-waitAbsolutely (Options to _ _ _) = threadDelay (fromIntegral $ 1000 * to)
+waitAbsolutely (Options 0 _ _ _ _) = forever (threadDelay 10000000)
+waitAbsolutely (Options to _ _ _ _) = threadDelay (fromIntegral $ 1000 * to)
 
 main :: IO ()
 main = do

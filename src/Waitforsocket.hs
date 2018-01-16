@@ -67,11 +67,11 @@ parseTarget =
     http = urlParser >>= \(URL u) -> return $ HTTP (T.unpack u)
     tcp = hostPortParser >>= \(h,p) -> return $ TCP (T.unpack h) (Service (T.unpack p))
 
-while :: IO (Maybe Bool) -> IO (Maybe Bool)
-while f = do
+while :: Int -> IO (Maybe Bool) -> IO (Maybe Bool)
+while d f = do
   v <- f
   if fromMaybe False v then return v
-    else threadDelay 1000000 >> while f
+    else threadDelay d >> while d f
 
 waitN :: (Integral n) => n -> IO [Async a] -> IO [Async a]
 waitN 0 asyncs = asyncs
