@@ -22,7 +22,7 @@ library
   default-language:    Haskell2010
   ghc-options:         -Wall
 
-executable waitforsocket-exe
+executable waitforsocket
   hs-source-dirs:      app
   main-is:             Main.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
