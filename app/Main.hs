@@ -63,7 +63,7 @@ connect :: Target -> IO Bool
 connect targ = do
   (t,b) <- timedFun (tryConnect targ)
   when b $ loginfo $ "Connected to " ++ show targ ++ " in " ++ show t
-  return b
+  pure b
 
 waitforsockets :: Options -> IO ()
 waitforsockets (Options _ req to fd things) = do
@@ -71,7 +71,7 @@ waitforsockets (Options _ req to fd things) = do
   let todo = if req == 0 || req > lth then lth else req
   let asyncs = mapM (async . waitfor) things
   _ <- waitN todo asyncs
-  return ()
+  pure ()
 
   where millis = (* 1000)
         waitfor :: Target -> IO (Maybe Bool)

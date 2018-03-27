@@ -14,7 +14,7 @@ instance Arbitrary ArbitraryHostname where
   arbitrary = do
     c <- choose (1, 4)
     parts <- vectorOf c seg
-    return $ ArbitraryHostname $ intercalate "." parts
+    pure $ ArbitraryHostname $ intercalate "." parts
 
       where seg :: Gen String
             seg = do
@@ -24,7 +24,7 @@ instance Arbitrary ArbitraryHostname where
               more <- vectorOf n $ elements ('-':valid)
               n' <- choose (0 + if n > 0 then 1 else 0, 1)
               evenmore <- vectorOf n' $ elements valid
-              return (first:more ++ evenmore)
+              pure (first:more ++ evenmore)
 
   shrink (ArbitraryHostname h)
     | length h == 1 = []
