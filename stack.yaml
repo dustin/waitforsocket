@@ -1,3 +1,7 @@
 packages:
 - .
 resolver: lts-14.20
+
+nix:
+  enable: false
+  packages: [zlib]
