@@ -67,7 +67,7 @@ tryConnect targ@(TCP h p) = attemptIO targ $ connectTo >>= close >> pure True
         open addr = do
           sock <- socket (addrFamily addr) (addrSocketType addr) (addrProtocol addr)
           connect sock $ addrAddress addr
-          return sock
+          pure sock
 
 contact :: Target -> IO Bool
 contact targ = do
