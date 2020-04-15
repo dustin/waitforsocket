@@ -45,17 +45,17 @@ options = Options
 
 attemptIO :: Target -> IO Bool -> IO Bool
 attemptIO t f = do
-  loginfo $ "Connecting to " ++ show t
+  loginfo $ "Connecting to " <> show t
   catches f [
     Handler (\(e :: HttpException) -> False <$ printHTTPEx e),
-    Handler (\(e :: SomeException) -> False <$ loginfo ("Error connecting to " ++ show t ++ ": " ++ show e))
+    Handler (\(e :: SomeException) -> False <$ loginfo ("Error connecting to " <> show t <> ": " <> show e))
             ]
 
   where
     printHTTPEx (HttpExceptionRequest _ (StatusCodeException res _)) =
-      loginfo $ show t ++ " " ++ (show.responseStatus) res
-    printHTTPEx (HttpExceptionRequest _ he) = loginfo $ show t ++ " " ++ show he
-    printHTTPEx e = loginfo $ "http exception: " ++ show e
+      loginfo $ show t <> " " <> (show.responseStatus) res
+    printHTTPEx (HttpExceptionRequest _ he) = loginfo $ show t <> " " <> show he
+    printHTTPEx e = loginfo $ "http exception: " <> show e
 
 tryConnect :: Target -> IO Bool
 tryConnect targ@(HTTP u) = attemptIO targ $ simpleHttp u >> pure True
@@ -72,7 +72,7 @@ tryConnect targ@(TCP h p) = attemptIO targ $ connectTo >>= close >> pure True
 contact :: Target -> IO Bool
 contact targ = do
   (t,b) <- timedFun (tryConnect targ)
-  when b $ loginfo $ "Connected to " ++ show targ ++ " in " ++ show t
+  when b $ loginfo $ "Connected to " <> show targ <> " in " <> show t
   pure b
 
 waitforsockets :: Options -> IO ()
