@@ -1,6 +1,6 @@
 packages:
 - .
-resolver: lts-14.20
+resolver: lts-15.8
 
 nix:
   packages: [zlib]

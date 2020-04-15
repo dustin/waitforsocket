@@ -13,24 +13,24 @@ module Waitforsocket
     , hostPortParser
     ) where
 
-import Control.Applicative ((<|>))
-import Control.Concurrent.Async (waitAny, Async)
-import Control.Concurrent (threadDelay)
-import Control.Monad (guard)
-import Data.Maybe (fromMaybe)
-import Data.Time.Clock (getCurrentTime, diffUTCTime, NominalDiffTime)
-import Data.String (fromString)
-import qualified Data.Attoparsec.Text as A
-import qualified Data.Text as T
-import Network (PortID(..))
+import           Control.Applicative      ((<|>))
+import           Control.Concurrent       (threadDelay)
+import           Control.Concurrent.Async (Async, waitAny)
+import           Control.Monad            (guard)
+import qualified Data.Attoparsec.Text     as A
+import           Data.Maybe               (fromMaybe)
+import           Data.String              (fromString)
+import qualified Data.Text                as T
+import           Data.Time.Clock          (NominalDiffTime, diffUTCTime,
+                                           getCurrentTime)
+import           Network.Socket           (HostName, ServiceName)
 
-data Target = TCP String PortID
-            | HTTP String
+data Target = TCP HostName ServiceName
+    | HTTP String
 
 instance Show Target where
-  show (TCP s (Service p)) = "tcp@" ++ s ++ ":" ++ p
-  show (HTTP s) = "web@" ++ s
-  show _ = undefined
+  show (TCP s p) = "tcp@" ++ s ++ ":" ++ p
+  show (HTTP s)  = "web@" ++ s
 
 newtype Hostname = Hostname T.Text deriving (Show)
 
@@ -65,7 +65,7 @@ parseTarget =
   A.parseOnly (http <|> tcp) . fromString
   where
     http = urlParser >>= \(URL u) -> pure $ HTTP (T.unpack u)
-    tcp = hostPortParser >>= \(h,p) -> pure $ TCP (T.unpack h) (Service (T.unpack p))
+    tcp = hostPortParser >>= \(h,p) -> pure $ TCP (T.unpack h) (T.unpack p)
 
 while :: Int -> IO (Maybe Bool) -> IO (Maybe Bool)
 while d f = do

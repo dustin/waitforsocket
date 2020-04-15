@@ -2,33 +2,38 @@
 
 module Main where
 
-import Waitforsocket
+import           Waitforsocket
 
-import Data.Either (isLeft)
-import System.IO (hClose)
-import Network (connectTo)
-import Network.HTTP.Conduit (simpleHttp, HttpException(..), HttpExceptionContent(..), responseStatus)
-import Control.Monad (when, forever)
-import Control.Exception.Safe (catches, Handler(..), SomeException)
-import Control.Concurrent (threadDelay)
-import Control.Concurrent.Async (async, race)
-import Control.Concurrent.Timeout (timeout)
-import System.Exit (die)
+import           Control.Concurrent         (threadDelay)
+import           Control.Concurrent.Async   (async, race)
+import           Control.Concurrent.Timeout (timeout)
+import           Control.Exception.Safe     (Handler (..), SomeException,
+                                             catches)
+import           Control.Monad              (forever, when)
+import           Data.Either                (isLeft)
+import           Network.HTTP.Conduit       (HttpException (..),
+                                             HttpExceptionContent (..),
+                                             responseStatus, simpleHttp)
+import           Network.Socket             (AddrInfo (..), SocketType (..),
+                                             close, connect, defaultHints,
+                                             getAddrInfo, socket)
+import           Options.Applicative        (Parser, argument, auto,
+                                             eitherReader, execParser, fullDesc,
+                                             help, helper, info, long, metavar,
+                                             option, progDesc, showDefault,
+                                             some, value, (<**>))
+import           System.Exit                (die)
+import           System.Log.Logger          (Priority (INFO), infoM,
+                                             rootLoggerName, setLevel,
+                                             updateGlobalLogger)
 
-import System.Log.Logger (rootLoggerName, updateGlobalLogger,
-                          Priority(INFO), setLevel, infoM)
-
-import Options.Applicative (option, auto, long, showDefault, value, help, some, helper, fullDesc,
-                            progDesc, argument, eitherReader, metavar, execParser, info,
-                            (<**>), Parser)
-import Data.Semigroup ((<>))
-
-data Options = Options { optAbsTimeout :: Integer
-                       , optRequired :: Integer
-                       , optTimeout :: Integer
-                       , failDelay :: Int
-                       , targets :: [Target]
-                       }
+data Options = Options
+    { optAbsTimeout :: Integer
+    , optRequired   :: Integer
+    , optTimeout    :: Integer
+    , failDelay     :: Int
+    , targets       :: [Target]
+    }
 
 loginfo :: String -> IO ()
 loginfo = infoM rootLoggerName
@@ -56,11 +61,19 @@ attemptIO t f = do
     printHTTPEx e = loginfo $ "http exception: " ++ show e
 
 tryConnect :: Target -> IO Bool
-tryConnect targ@(TCP h p) = attemptIO targ $ connectTo h p >>= hClose >> pure True
 tryConnect targ@(HTTP u) = attemptIO targ $ simpleHttp u >> pure True
+tryConnect targ@(TCP h p) = attemptIO targ $ connectTo >>= close >> pure True
+  where connectTo = open =<< resolve
+        resolve = do
+          let hints = defaultHints { addrSocketType = Stream }
+          head <$> getAddrInfo (Just hints) (Just h) (Just p)
+        open addr = do
+          sock <- socket (addrFamily addr) (addrSocketType addr) (addrProtocol addr)
+          connect sock $ addrAddress addr
+          return sock
 
-connect :: Target -> IO Bool
-connect targ = do
+contact :: Target -> IO Bool
+contact targ = do
   (t,b) <- timedFun (tryConnect targ)
   when b $ loginfo $ "Connected to " ++ show targ ++ " in " ++ show t
   pure b
@@ -75,10 +88,10 @@ waitforsockets (Options _ req to fd things) = do
 
   where millis = (* 1000)
         waitfor :: Target -> IO (Maybe Bool)
-        waitfor u = while (fd * 1000000) $ timeout (millis to) (connect u)
+        waitfor u = while (fd * 1000000) $ timeout (millis to) (contact u)
 
 waitAbsolutely :: Options -> IO ()
-waitAbsolutely (Options 0 _ _ _ _) = forever (threadDelay 10000000)
+waitAbsolutely (Options 0 _ _ _ _)  = forever (threadDelay 10000000)
 waitAbsolutely (Options to _ _ _ _) = threadDelay (fromIntegral $ 1000 * to)
 
 main :: IO ()

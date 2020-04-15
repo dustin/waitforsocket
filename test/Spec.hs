@@ -1,12 +1,12 @@
-import Test.QuickCheck
-import Test.QuickCheck.Arbitrary ()
-import Test.Tasty
-import Test.Tasty.QuickCheck as QC
+import           Test.QuickCheck
+import           Test.QuickCheck.Arbitrary ()
+import           Test.Tasty
+import           Test.Tasty.QuickCheck     as QC
 
-import Network (PortID(..))
-import Data.List (intercalate, tails)
+import           Data.List                 (intercalate, tails)
+import           Network.Socket            (HostName, ServiceName)
 
-import Waitforsocket
+import           Waitforsocket
 
 newtype ArbitraryHostname = ArbitraryHostname String deriving Show
 
@@ -43,15 +43,15 @@ instance Arbitrary ArbitraryHostname where
 propTCPTargetParsing :: ArbitraryHostname -> Positive Int -> Bool
 propTCPTargetParsing (ArbitraryHostname h) (Positive p) =
   case parseTarget (h ++ ":" ++ show p) of
-    Right (TCP h (Service p)) -> True
-    _ -> False
+    Right (TCP h p) -> True
+    _               -> False
 
 propHTTPTargetParsing :: ArbitraryHostname -> Bool
 propHTTPTargetParsing (ArbitraryHostname h) =
   let u = "http://" ++ h ++ "/stuff" in
     case parseTarget u of
       Right (HTTP u) -> True
-      _ -> False
+      _              -> False
 
 tests :: [TestTree]
 tests = [
