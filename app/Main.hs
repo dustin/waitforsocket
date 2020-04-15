@@ -23,9 +23,6 @@ import           Options.Applicative        (Parser, argument, auto,
                                              option, progDesc, showDefault,
                                              some, value, (<**>))
 import           System.Exit                (die)
-import           System.Log.Logger          (Priority (INFO), infoM,
-                                             rootLoggerName, setLevel,
-                                             updateGlobalLogger)
 
 data Options = Options
     { optAbsTimeout :: Integer
@@ -36,7 +33,7 @@ data Options = Options
     }
 
 loginfo :: String -> IO ()
-loginfo = infoM rootLoggerName
+loginfo = putStrLn
 
 options :: Parser Options
 options = Options
@@ -96,7 +93,6 @@ waitAbsolutely (Options to _ _ _ _) = threadDelay (fromIntegral $ 1000 * to)
 
 main :: IO ()
 main = do
-  updateGlobalLogger rootLoggerName (setLevel INFO)
   o <- execParser opts
   r <- race (waitAbsolutely o) (waitforsockets o)
   when (isLeft r) $ die "reached absolute timeout waiting for completion"

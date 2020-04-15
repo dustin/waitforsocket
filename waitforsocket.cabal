@@ -26,7 +26,7 @@ executable waitforsocket
   hs-source-dirs:      app
   main-is:             Main.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base, optparse-applicative, mtl, async, hslogger
+  build-depends:       base, optparse-applicative, mtl, async
                      , safe-exceptions
                      , unbounded-delays
                      , network, http-conduit
