@@ -9,7 +9,7 @@ import           Control.Concurrent.Async   (async, race)
 import           Control.Concurrent.Timeout (timeout)
 import           Control.Exception.Safe     (Handler (..), SomeException,
                                              catches)
-import           Control.Monad              (forever, when)
+import           Control.Monad              (forever, void, when)
 import           Data.Either                (isLeft)
 import           Network.HTTP.Conduit       (HttpException (..),
                                              HttpExceptionContent (..),
@@ -78,14 +78,14 @@ contact targ = do
 waitforsockets :: Options -> IO ()
 waitforsockets (Options _ req to fd things) = do
   let lth = fromIntegral $ length things
-  let todo = if req == 0 || req > lth then lth else req
-  let asyncs = mapM (async . waitfor) things
-  _ <- waitN todo asyncs
-  pure ()
+      todo = if req == 0 || req > lth then lth else req
+      asyncs = traverse (async . waitfor) things
+  void $ waitN todo asyncs
 
   where millis = (* 1000)
+        seconds = (* 1000000)
         waitfor :: Target -> IO (Maybe Bool)
-        waitfor u = while (fd * 1000000) $ timeout (millis to) (contact u)
+        waitfor u = while (seconds fd) $ timeout (millis to) (contact u)
 
 waitAbsolutely :: Options -> IO ()
 waitAbsolutely (Options 0 _ _ _ _)  = forever (threadDelay 10000000)
