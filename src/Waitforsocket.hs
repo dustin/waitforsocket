@@ -18,11 +18,9 @@ import           Control.Concurrent       (threadDelay)
 import           Control.Concurrent.Async (Async, waitAny)
 import           Control.Monad            (guard)
 import qualified Data.Attoparsec.Text     as A
-import           Data.Maybe               (fromMaybe)
 import           Data.String              (fromString)
 import qualified Data.Text                as T
-import           Data.Time.Clock          (NominalDiffTime, diffUTCTime,
-                                           getCurrentTime)
+import           Data.Time.Clock          (NominalDiffTime, diffUTCTime, getCurrentTime)
 import           Network.Socket           (HostName, ServiceName)
 
 data Target = TCP HostName ServiceName
@@ -70,7 +68,7 @@ parseTarget =
 while :: Int -> IO (Maybe Bool) -> IO (Maybe Bool)
 while d f = do
   v <- f
-  if fromMaybe False v then pure v
+  if v == Just True then pure v
     else threadDelay d >> while d f
 
 waitN :: (Integral n) => n -> IO [Async a] -> IO [Async a]
