@@ -7,21 +7,14 @@ import           Waitforsocket
 import           Control.Concurrent         (threadDelay)
 import           Control.Concurrent.Async   (async, race)
 import           Control.Concurrent.Timeout (timeout)
-import           Control.Exception.Safe     (Handler (..), SomeException,
-                                             catches)
-import           Control.Monad              (forever, void, when)
+import           Control.Exception.Safe     (Handler (..), SomeException, catches)
+import           Control.Monad              (forever, when)
 import           Data.Either                (isLeft)
-import           Network.HTTP.Conduit       (HttpException (..),
-                                             HttpExceptionContent (..),
-                                             responseStatus, simpleHttp)
-import           Network.Socket             (AddrInfo (..), SocketType (..),
-                                             close, connect, defaultHints,
-                                             getAddrInfo, socket)
-import           Options.Applicative        (Parser, argument, auto,
-                                             eitherReader, execParser, fullDesc,
-                                             help, helper, info, long, metavar,
-                                             option, progDesc, showDefault,
-                                             some, value, (<**>))
+import           Network.HTTP.Conduit       (HttpException (..), HttpExceptionContent (..), responseStatus, simpleHttp)
+import           Network.Socket             (AddrInfo (..), SocketType (..), close, connect, defaultHints, getAddrInfo,
+                                             socket)
+import           Options.Applicative        (Parser, argument, auto, eitherReader, execParser, fullDesc, help, helper,
+                                             info, long, metavar, option, progDesc, showDefault, some, value, (<**>))
 import           System.Exit                (die)
 
 data Options = Options
@@ -80,7 +73,8 @@ waitforsockets (Options _ req to fd things) = do
   let lth = fromIntegral $ length things
       todo = if req == 0 || req > lth then lth else req
       asyncs = traverse (async . waitfor) things
-  void $ waitN todo asyncs
+  (t, _) <- timedFun $ waitN todo asyncs
+  loginfo $ "Finished in " <> show t
 
   where millis = (* 1000)
         seconds = (* 1000000)
