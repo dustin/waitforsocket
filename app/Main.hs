@@ -4,25 +4,29 @@ module Main where
 
 import           Waitforsocket
 
-import           Control.Concurrent         (threadDelay)
-import           Control.Concurrent.Async   (async, race)
-import           Control.Concurrent.Timeout (timeout)
-import           Control.Exception.Safe     (Handler (..), SomeException, catches)
-import           Control.Monad              (forever, when)
-import           Data.Either                (isLeft)
-import           Network.HTTP.Conduit       (HttpException (..), HttpExceptionContent (..), responseStatus, simpleHttp)
-import           Network.Socket             (AddrInfo (..), SocketType (..), close, connect, defaultHints, getAddrInfo,
-                                             socket)
-import           Options.Applicative        (Parser, argument, auto, eitherReader, execParser, fullDesc, help, helper,
-                                             info, long, metavar, option, progDesc, showDefault, some, value, (<**>))
-import           System.Exit                (die)
+import           Control.Concurrent           (threadDelay)
+import           Control.Concurrent.Async     (async, race)
+import           Control.Concurrent.Timeout   (timeout)
+import           Control.Exception.Safe       (Handler (..), SomeException, catches)
+import           Control.Monad                (forever, when)
+import           Data.Either                  (isLeft)
+import qualified Data.List.NonEmpty           as NE
+import           Network.HTTP.Conduit         (HttpException (..), HttpExceptionContent (..), responseStatus,
+                                               simpleHttp)
+import           Network.Socket               (AddrInfo (..), SocketType (..), close, connect, defaultHints,
+                                               getAddrInfo, socket)
+import           Numeric.Natural
+import           Options.Applicative          (Parser, argument, auto, eitherReader, execParser, fullDesc, help, helper,
+                                               info, long, metavar, option, progDesc, showDefault, value, (<**>))
+import           Options.Applicative.NonEmpty (some1)
+import           System.Exit                  (die)
 
 data Options = Options
-    { optAbsTimeout :: Integer
-    , optRequired   :: Integer
-    , optTimeout    :: Integer
-    , failDelay     :: Int
-    , targets       :: [Target]
+    { optAbsTimeout :: Natural
+    , optRequired   :: Natural
+    , optTimeout    :: Natural
+    , failDelay     :: Natural
+    , targets       :: NE.NonEmpty Target
     }
 
 loginfo :: String -> IO ()
@@ -34,7 +38,7 @@ options = Options
   <*> option auto (long "required" <> showDefault <> value 0 <> help "how many connections required (0 = all)")
   <*> option auto (long "timeout" <> showDefault <> value 5000 <> help "connect/retry timeout (ms)")
   <*> option auto (long "faildelay" <> showDefault <> value 1 <> help "seconds to delay before retrying")
-  <*> some (argument (eitherReader parseTarget) (metavar "targets..."))
+  <*> some1 (argument (eitherReader parseTarget) (metavar "targets..."))
 
 attemptIO :: Target -> IO Bool -> IO Bool
 attemptIO t f = do
@@ -73,13 +77,13 @@ waitforsockets (Options _ req to fd things) = do
   let lth = fromIntegral $ length things
       todo = if req == 0 || req > lth then lth else req
       asyncs = traverse (async . waitfor) things
-  (t, _) <- timedFun $ waitN todo asyncs
+  (t, _) <- timedFun $ waitN todo (NE.toList <$> asyncs)
   loginfo $ "Finished in " <> show t
 
-  where millis = (* 1000)
-        seconds = (* 1000000)
+  where millis =  (* 1000)
+        seconds = (* 1000) . millis
         waitfor :: Target -> IO (Maybe Bool)
-        waitfor u = while (seconds fd) $ timeout (millis to) (contact u)
+        waitfor u = while (seconds fd) $ timeout (fromIntegral (millis to)) (contact u)
 
 waitAbsolutely :: Options -> IO ()
 waitAbsolutely (Options 0 _ _ _ _)  = forever (threadDelay 10000000)

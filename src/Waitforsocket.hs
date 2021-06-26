@@ -22,6 +22,7 @@ import           Data.String              (fromString)
 import qualified Data.Text                as T
 import           Data.Time.Clock          (NominalDiffTime, diffUTCTime, getCurrentTime)
 import           Network.Socket           (HostName, ServiceName)
+import           Numeric.Natural
 
 data Target = TCP HostName ServiceName
     | HTTP String
@@ -65,13 +66,13 @@ parseTarget =
     http = urlParser >>= \(URL u) -> pure $ HTTP (T.unpack u)
     tcp = hostPortParser >>= \(h,p) -> pure $ TCP (T.unpack h) (T.unpack p)
 
-while :: Int -> IO (Maybe Bool) -> IO (Maybe Bool)
+while :: Natural -> IO (Maybe Bool) -> IO (Maybe Bool)
 while d f = do
   v <- f
   if v == Just True then pure v
-    else threadDelay d >> while d f
+    else threadDelay (fromIntegral d) >> while d f
 
-waitN :: (Integral n) => n -> IO [Async a] -> IO [Async a]
+waitN :: Natural -> IO [Async a] -> IO [Async a]
 waitN 0 asyncs = asyncs
 waitN n asyncs = do
   as <- asyncs
