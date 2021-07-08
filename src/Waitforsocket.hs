@@ -6,7 +6,6 @@ module Waitforsocket
     , timedFun
     , Target(..)
     , parseTarget
-    , Hostname(..)
     , URL(..)
     , hostnameParser
     , urlParser
@@ -18,6 +17,7 @@ import           Control.Concurrent       (threadDelay)
 import           Control.Concurrent.Async (Async, waitAny)
 import           Control.Monad            (guard)
 import qualified Data.Attoparsec.Text     as A
+import           Data.Foldable            (fold)
 import           Data.String              (fromString)
 import qualified Data.Text                as T
 import           Data.Time.Clock          (NominalDiffTime, diffUTCTime, getCurrentTime)
@@ -28,15 +28,11 @@ data Target = TCP HostName ServiceName
     | HTTP String
 
 instance Show Target where
-  show (TCP s p) = "tcp@" ++ s ++ ":" ++ p
-  show (HTTP s)  = "web@" ++ s
+  show (TCP s p) = fold ["tcp@", s, ":", p]
+  show (HTTP s)  = fold ["web@", s]
 
-newtype Hostname = Hostname T.Text deriving (Show)
-
-hostnameParser :: A.Parser Hostname
-hostnameParser = do
-  parts <- hpart `A.sepBy1` A.char '.'
-  pure $ Hostname (T.intercalate "." parts)
+hostnameParser :: A.Parser T.Text
+hostnameParser = T.intercalate "." <$> hpart `A.sepBy1` A.char '.'
   where hpart :: A.Parser T.Text
         hpart = do
           t <- A.takeWhile1 (A.inClass "A-z0-9-")
@@ -44,20 +40,16 @@ hostnameParser = do
           pure t
 
 hostPortParser :: A.Parser (T.Text, T.Text)
-hostPortParser = do
-  (Hostname host) <- hostnameParser
-  _ <- A.string ":"
-  port <- A.takeWhile (A.inClass "A-z0-9")
-  pure (host, port)
+hostPortParser = (,) <$> (hostnameParser <* ":") <*> A.takeWhile (A.inClass "A-z0-9")
 
 newtype URL = URL T.Text deriving (Show)
 
 urlParser :: A.Parser URL
 urlParser = do
   prot <- A.string "http://" <|> A.string "https://"
-  (Hostname host) <- hostnameParser
+  host <- hostnameParser
   rest <- A.takeText
-  pure $ URL $ T.concat [prot, host, rest]
+  pure $ URL $ fold [prot, host, rest]
 
 parseTarget :: String -> Either String Target
 parseTarget =
