@@ -20,7 +20,8 @@ library
                      , async, time, network, optparse-applicative, HTTP
                      , attoparsec, text
   default-language:    Haskell2010
-  ghc-options:         -Wall
+  ghc-options:         -Wall -O2
+
 
 executable waitforsocket
   hs-source-dirs:      app
@@ -32,7 +33,7 @@ executable waitforsocket
                      , network, http-conduit
                      , waitforsocket
   default-language:    Haskell2010
-  ghc-options:         -Wall
+  ghc-options:         -Wall -O2
 
 test-suite waitforsocket-test
   type:                exitcode-stdio-1.0
