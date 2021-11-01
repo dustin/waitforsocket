@@ -82,7 +82,6 @@ waitforsockets (Options _ req to fd things) = do
 
   where millis =  (* 1000)
         seconds = (* 1000) . millis
-        waitfor :: Target -> IO (Maybe Bool)
         waitfor u = while (seconds fd) $ timeout (fromIntegral (millis to)) (contact u)
 
 waitAbsolutely :: Options -> IO ()

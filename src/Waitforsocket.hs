@@ -15,7 +15,7 @@ module Waitforsocket
 import           Control.Applicative      ((<|>))
 import           Control.Concurrent       (threadDelay)
 import           Control.Concurrent.Async (Async, waitAny)
-import           Control.Monad            (guard)
+import           Control.Monad            (guard, unless)
 import qualified Data.Attoparsec.Text     as A
 import           Data.Foldable            (fold)
 import           Data.String              (fromString)
@@ -52,17 +52,13 @@ urlParser = do
   pure $ URL $ fold [prot, host, rest]
 
 parseTarget :: String -> Either String Target
-parseTarget =
-  A.parseOnly (http <|> tcp) . fromString
+parseTarget = A.parseOnly (http <|> tcp) . fromString
   where
     http = urlParser >>= \(URL u) -> pure $ HTTP (T.unpack u)
     tcp = hostPortParser >>= \(h,p) -> pure $ TCP (T.unpack h) (T.unpack p)
 
-while :: Natural -> IO (Maybe Bool) -> IO (Maybe Bool)
-while d f = do
-  v <- f
-  if v == Just True then pure v
-    else threadDelay (fromIntegral d) >> while d f
+while :: Natural -> IO (Maybe Bool) -> IO ()
+while d f = f >>= \v -> unless (v == Just True) $ threadDelay (fromIntegral d) *> while d f
 
 waitN :: Natural -> IO [Async a] -> IO [Async a]
 waitN 0 asyncs = asyncs
