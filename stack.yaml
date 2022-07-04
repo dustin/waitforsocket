@@ -1,8 +1,6 @@
 packages:
 - .
-extra-deps:
-- network-3.1.2.5@sha256:433a5e076aaa8eb3e4158abae78fb409c6bd754e9af99bc2e87583d2bcd8404a,4888
-resolver: lts-18.14
+resolver: lts-19.13
 
 nix:
   packages: [zlib]
