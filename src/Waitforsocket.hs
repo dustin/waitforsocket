@@ -6,10 +6,6 @@ module Waitforsocket
     , timedFun
     , Target(..)
     , parseTarget
-    , URL(..)
-    , hostnameParser
-    , urlParser
-    , hostPortParser
     ) where
 
 import           Control.Applicative      ((<|>))
@@ -38,23 +34,18 @@ hostnameParser = T.unpack . T.intercalate "." <$> hpart `A.sepBy1` A.char '.'
           guard $ '-' `notElem` [T.head t, T.last t]
           pure t
 
-hostPortParser :: A.Parser (HostName, ServiceName)
-hostPortParser = (,) <$> (hostnameParser <* ":") <*> (T.unpack <$> A.takeWhile (A.inClass "A-z0-9"))
+tcpParser :: A.Parser Target
+tcpParser = TCP <$> (hostnameParser <* ":") <*> (T.unpack <$> A.takeWhile (A.inClass "A-z0-9"))
 
-newtype URL = URL { unURL :: String } deriving (Show)
-
-urlParser :: A.Parser URL
-urlParser = do
+httpParser :: A.Parser Target
+httpParser = do
   prot <- A.string "http://" <|> A.string "https://"
   host <- hostnameParser
   rest <- A.takeText
-  pure . URL $ fold [T.unpack prot, host, T.unpack rest]
+  pure . HTTP $ fold [T.unpack prot, host, T.unpack rest]
 
 parseTarget :: String -> Either String Target
-parseTarget = A.parseOnly (http <|> tcp) . T.pack
-  where
-    http = HTTP . unURL <$> urlParser
-    tcp = uncurry TCP <$> hostPortParser
+parseTarget = A.parseOnly (httpParser <|> tcpParser) . T.pack
 
 while :: Natural -> IO (Maybe Bool) -> IO ()
 while d f = f >>= \v -> unless (v == Just True) $ threadDelay (fromIntegral d) *> while d f
