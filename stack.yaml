@@ -1,6 +1,6 @@
 packages:
 - .
-resolver: lts-19.13
+resolver: lts-19.14
 
 nix:
   packages: [zlib]
