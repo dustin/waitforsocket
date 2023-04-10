@@ -1,2 +1,6 @@
 *~/
 .stack-work
+.direnv
+.hie
+dist-newstyle
+.DS_Store
