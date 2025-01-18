@@ -1,6 +1,6 @@
 packages:
 - .
-resolver: lts-20.17
+resolver: lts-22.27
 
 nix:
   packages: [zlib]
