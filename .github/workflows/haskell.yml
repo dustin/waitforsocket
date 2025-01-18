@@ -15,15 +15,15 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Cache Key
       id: cache_key
-      run: echo ::set-output name=key::$(md5sum stack.yaml | awk '{print $1}')
+      run: echo "key=$(md5sum stack.yaml | awk '{print $1}')" >> $GITHUB_OUTPUT
 
     - name: Cache Dependencies
       id: cache
-      uses: actions/cache@v1
+      uses: actions/cache@v4
       with:
         path: ~/.stack
         key: ${{ matrix.os }}-${{ steps.cache_key.outputs.key }}
@@ -40,7 +40,7 @@ jobs:
         cp $HOME/.local/bin/waitforsocket .
 
     - name: Store Artifact
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: waitforsocket-${{ matrix.os }}
         path: waitforsocket
