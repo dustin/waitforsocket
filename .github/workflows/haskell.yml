@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
+  stack:
     runs-on: "ubuntu-latest"
 
     steps:
