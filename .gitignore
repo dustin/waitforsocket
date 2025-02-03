@@ -1,0 +1,6 @@
+zig-out
+.zig-cache
+.direnv
+docs
+*.a
+*.o
